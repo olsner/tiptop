@@ -368,7 +368,7 @@ void new_processes(struct process_list* const list,
         /* We have a new thread. */
 
         /* allocate memory */
-        ptr = malloc(sizeof(struct process));
+        ptr = calloc(1, sizeof(struct process));
 
         /* insert into list of processes */
         /* Insert at the front of the list. This will later let us
@@ -390,27 +390,20 @@ void new_processes(struct process_list* const list,
         ptr->tid = tid;
         ptr->pid = pid;
         ptr->proc_id = -1;
-        ptr->dead = 0;
-        ptr->u.d = 0.0;
 
         passwd = getpwuid(uid);
         if (passwd)
           ptr->username = strdup(passwd->pw_name);
-        else
-          ptr->username = NULL;
 
         ptr->num_threads = (short)num_threads;
         if (cmdline[0] == '\0')
           get_cmdline(pid, cmdline, sizeof(cmdline));
         ptr->cmdline = strdup(cmdline);
         ptr->name = strdup(proc_name);
-        ptr->timestamp.tv_sec = 0;
-        ptr->timestamp.tv_usec = 0;
-        ptr->prev_cpu_time_s = 0;
-        ptr->prev_cpu_time_u = 0;
-        ptr->cpu_percent = 0.0;
-        ptr->cpu_percent_s = 0.0;
-        ptr->cpu_percent_u = 0.0;
+
+        for (i = 0; i < MAX_EVENTS; i++) {
+            ptr->fd[i] = -1;
+        }
 
         float uptime;
         f = fopen("/proc/uptime", "r");
@@ -449,7 +442,7 @@ void new_processes(struct process_list* const list,
           }
         }
 
-        ptr->txt = malloc(TXT_LEN * sizeof(char));
+        ptr->txt = calloc(TXT_LEN, sizeof(char));
 
         list->num_tids++;  /* insert in any case */
         num_tids++;
@@ -564,8 +557,8 @@ int update_proc_list(struct process_list* const list,
 
     proc->proc_id = (short)proc_id;
     /* Backup previous value of counters */
-    for(zz = 0; zz < proc->num_events; zz++)
-      proc->prev_values[zz] = proc->values[zz];
+    memcpy(proc->prev_values, proc->values,
+            proc->num_events * sizeof(proc->values[0]));
 
     /* Read performance counters */
     for(zz = 0; zz < proc->num_events; zz++) {
