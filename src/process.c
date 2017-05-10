@@ -407,6 +407,8 @@ void new_processes(struct process_list* const list,
 
         float uptime;
         f = fopen("/proc/uptime", "r");
+        if (!f)
+            continue;
         n = fscanf(f, "%f", &uptime);
         fclose(f);
         uptime *= clk_tck;
