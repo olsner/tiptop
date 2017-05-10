@@ -18,7 +18,6 @@
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <valgrind/valgrind.h>
 
 #include "error.h"
 #include "hash.h"
@@ -69,10 +68,6 @@ struct process_list* init_proc_list()
     fclose(f);
   }
 
-  // Valgrind (current versions) have a limit on number of file descriptors
-  // that is kind of low...
-  if (RUNNING_ON_VALGRIND && num_files_limit > 1024)
-    num_files_limit = 1024;
   num_files_limit -= 10; /* keep some slack */
   if (num_files_limit == 0)  /* something went wrong */
     num_files_limit = 200;  /* reasonable default? */
