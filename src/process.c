@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/resource.h>
 #include <unistd.h>
 
 #include "error.h"
@@ -40,9 +41,7 @@ static int   clk_tck;
 struct process_list* init_proc_list()
 {
   struct process_list* l;
-  char  name[100] = { 0 };  /* needs to fit the name /proc/xxxx/limits */
-  char  line[100];
-  FILE* f;
+  struct rlimit rlim;
 
   clk_tck = sysconf(_SC_CLK_TCK);
 
@@ -56,16 +55,24 @@ struct process_list* init_proc_list()
   hash_init();
 
   num_files_limit = 0;
-  snprintf(name, sizeof(name) - 1, "/proc/%d/limits", getpid());
-  f = fopen(name, "r");
-  if (f) {
-    while (fgets(line, 100, f)) {
-      int n;
-      n = sscanf(line, "Max open files %d", &num_files_limit);
-      if (n)
-        break;
+  if (getrlimit(RLIMIT_NOFILE, &rlim) == 0) {
+    num_files_limit = rlim.rlim_cur;
+  } else {
+    char  name[100] = { 0 };  /* needs to fit the name /proc/xxxx/limits */
+    char  line[100];
+    FILE* f;
+    perror("getrlimit");
+    snprintf(name, sizeof(name) - 1, "/proc/%d/limits", getpid());
+    f = fopen(name, "r");
+    if (f) {
+      while (fgets(line, 100, f)) {
+        int n;
+        n = sscanf(line, "Max open files %d", &num_files_limit);
+        if (n)
+          break;
+      }
+      fclose(f);
     }
-    fclose(f);
   }
 
   num_files_limit -= 10; /* keep some slack */
